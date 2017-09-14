@@ -1,3 +1,16 @@
+## RehabMan fork information
+
+This github project is my fork of Micky1979's Build_Clover.command.
+
+The main differences:
+
+- does not clear the screen so often
+
+- does not cause the Terminal window to move to the left side of the screen after build
+
+- fetches and builds my fork of Clover from my github, instead of base Clover from sourceforge
+
+
 # Build_Clover
 A script to build [Clover V2](https://sourceforge.net/p/cloverefiboot/code/HEAD/tree) bootloader under macOS / OS X, Ubuntu 16.04+ and Debian Jessie 8.6+
 

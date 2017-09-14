@@ -1,6 +1,8 @@
 #!/bin/bash
 #set -x
-printf '\e[8;34;90t'
+DISABLE_CLEAR="YES" # quit messing with my Terminal window
+
+if [[ "$DISABLE_CLEAR" != "YES" ]]; then printf '\e[8;34;90t'; fi
 
 # made by Micky1979 on 07/05/2016 based on Slice, Zenith432, STLVNUB, JrCs, cvad, Rehabman, and ErmaC works
 
@@ -54,7 +56,9 @@ SUGGESTED_CLOVER_REV="" # empty by default
 # normal behavior (src inside the Home folder)
 # MODE="S" src is ~/src
 # MODE="R" src created where this script is located (use only if the path has no blank spaces in the middle)
-MODE="S"
+# MODE="D" don't bury in ./src, instead just put all in script dir (eg. ./edk/Clover instead of ./src/edk/Clover)
+#   (note: MODE D does not quite work)
+MODE="R"
 
 DEFAULT_MACROS="-D NO_GRUB_DRIVERS_EMBEDDED -D CHECK_FLAGS"
 PATCHES="$HOME/CloverPatches" # or where you like
@@ -92,9 +96,14 @@ GITHUB='https://raw.githubusercontent.com/Micky1979/Build_Clover/master/Build_Cl
 CLOVER_REP="svn://svn.code.sf.net/p/cloverefiboot/code"
 EDK2_REP="svn://svn.code.sf.net/p/edk2/code/trunk/edk2"
 
+CLOVER_GIT="https://github.com/RehabMan/Clover.git"
+USE_CLOVER_GIT=YES
+SVN_OPT=-q
+
 SELF_UPDATE_OPT="NO" # show hide selfUpdate option
 PING_RESPONSE="NO" # show hide option with connection dependency
 REMOTE_EDK2_REV="" # info for developer submenu this mean to show latest rev avaiable
+DISABLE_CLEAR="YES" # quit messing with my Terminal window
 
 edk2array=(
 	MdePkg
@@ -137,6 +146,9 @@ macros=(
 # --------------------------------------
 # FUNCTIONS
 # --------------------------------------
+ClearScreen() {
+    if [[ "$DISABLE_CLEAR" != "YES" ]]; then clear; fi
+}
 CheckProprietary() {
 local drivers_off="${DIR_MAIN}/edk2/Clover/CloverPackage/CloverV2/drivers-Off"
 local ghlink="https://github.com/Micky1979/Build_Clover/raw/work/Files"
@@ -212,10 +224,10 @@ IsNumericOnly() {
 }
 # --------------------------------------
 pressAnyKey(){
-[[ "${2}" != noclear ]] && clear
+[[ "${2}" != noclear ]] && ClearScreen
 printf "${1}\n"
 read -rsp $'Press any key to continue...\n' -n1 key
-clear
+ClearScreen
 }
 # --------------------------------------
 selfUpdate() {
@@ -228,12 +240,12 @@ case $answer in
 		if [[ -f /tmp/Build_Clover.tmp ]]; then
 			# get the line containing MODE variable and replace with what is currently in old script:
 			local lineVarNum=$(cat /tmp/Build_Clover.tmp | grep -n '^MODE="' | awk -F ":" '{print $1}')
-			if [[ "$MODE" == "R" ]]; then
+			if [[ "$MODE" == "R" || "$MODE" == "D" ]]; then
 				if IsNumericOnly $lineVarNum; then
 					if [[ "$SYSNAME" == Linux ]]; then
-						sed -i "${lineVarNum}s/.*/MODE=\"R\"/" /tmp/Build_Clover.tmp
+						sed -i "${lineVarNum}s/.*/MODE=\"$MODE\"/" /tmp/Build_Clover.tmp
 					else
-						sed -i "" "${lineVarNum}s/.*/MODE=\"R\"/" /tmp/Build_Clover.tmp
+						sed -i "" "${lineVarNum}s/.*/MODE=\"$MODE\"/" /tmp/Build_Clover.tmp
 					fi
 					cat /tmp/Build_Clover.tmp > "${SCRIPT_ABS_LOC}"
 					exec "${SCRIPT_ABS_LOC}"
@@ -281,7 +293,7 @@ printf "\e[1;32m${1}\e[0m\040"
 }
 # --------------------------------------
 addSymlink() {
-clear
+ClearScreen
 if [[ ! -d "$(dirname $SYMLINKPATH)" ]]; then
 	printError "$(dirname $SYMLINKPATH) does not exist, cannot add a symlink..\n"
 	pressAnyKey '\n'
@@ -320,7 +332,7 @@ if [[ "$SYSNAME" == Linux ]]; then
 	# check whether at least one of curl or wget are installed
 	[[ ! -x $(which wget) && ! -x $(which curl) ]] && depend+=" wget"
 	# installing the dependencies
-	if [[ "$depend" != "" ]]; then clear; aptInstall "$depend"; fi
+	if [[ "$depend" != "" ]]; then ClearScreen; aptInstall "$depend"; fi
 	# set the donloader command path
 	if [[ -x $(which wget) ]]; then
 		DOWNLOADER_PATH=$(dirname $(which wget))
@@ -340,7 +352,7 @@ fi
 # --------------------------------------
 printCloverScriptRev() {
 initialChecks
-clear
+ClearScreen
 local LVALUE RVALUE SVERSION RSCRIPTVER RSDATA
 local SNameVer="Build_Clover script ${SCRIPTVER}"
 
@@ -470,9 +482,15 @@ else
 	REMOTE_EDK2_REV=""
 fi
 
-if [[ -d "${DIR_MAIN}"/edk2/Clover/.svn ]]; then
+if [[ -e "${DIR_MAIN}"/edk2/Clover/_svnver.txt ]]; then
+    LOCAL_REV=$(cat "${DIR_MAIN}"/edk2/Clover/_svnver.txt)
+elif [[ -d "${DIR_MAIN}"/edk2/Clover/.svn ]]; then
 	svnUpgrade # upgrade the working copy to avoid errors
 	LOCAL_REV=$(svn info "${DIR_MAIN}"/edk2/Clover | grep '^Revision:' | tr -cd [:digit:])
+elif [[ -d "${DIR_MAIN}"/edk2/Clover/.git ]]; then
+    cd "${DIR_MAIN}"/edk2/Clover
+    LOCAL_REV=$(git svn info | grep '^Revision:' | tr -cd [:digit:])
+    cd ../../..
 else
 	LOCAL_REV=""
 fi
@@ -491,7 +509,7 @@ archs=(
 	'Back to Main Menu'
 	'Exit'
 )
-clear
+ClearScreen
 printHeader "Select the desired architecture"
 if [[ -n "$1" ]]; then echo "$1"; echo; fi
 local count=1
@@ -508,7 +526,7 @@ case $opt in
 	1 ) ARCH="X64";;
 	2 ) ARCH="IA32_X64";;
 	3 ) ARCH="IA32";;
-	4 ) clear && BUILDER=$USER && build;;
+	4 ) ClearScreen && BUILDER=$USER && build;;
 	5 ) CleanExit;;
 	* ) selectArch "invalid choice!";;
 esac
@@ -524,7 +542,7 @@ archs=(
 	'Back to Select architecture menu'
 	'Exit'
 )
-clear
+ClearScreen
 printHeader "Select the desired pkg type"
 if [[ -n "$1" ]]; then echo "$1" && echo; fi
 local count=1
@@ -542,7 +560,7 @@ case $opt in
 	2 ) MAKEPKG_CMD="make slimpkg1";;
 	3 ) MAKEPKG_CMD="make slimpkg2";;
 	4 ) MAKEPKG_CMD="make slimpkg3";;
-	5 ) clear && selectArch;;
+	5 ) ClearScreen && selectArch;;
 	6 ) CleanExit;;
 	* ) slimPKG "invalid choice!";;
 esac
@@ -575,7 +593,7 @@ fi
 }
 # --------------------------------------
 showInfo () {
-clear
+ClearScreen
 printHeader "INFO"
 
 printf "This script was originally created to be run in newer OSes like El Capitan\n"
@@ -849,10 +867,10 @@ else
 	cd "${DIR_MAIN}"/edk2
 	IsLinkOnline $EDK2_REP
 	# I want ".svn", also empty at the specified revision! .. so I can update!
-	svnWithErrorCheck "svn --depth empty co $revision --non-interactive --trust-server-cert $EDK2_REP ."
+	svnWithErrorCheck "svn checkout $SVN_OPT --depth empty $revision --non-interactive --trust-server-cert $EDK2_REP ."
 	printf "\n\e[1;34medksetup.sh:\e[0m\n"
 	IsLinkOnline $EDK2_REP/edksetup.sh
-	svnWithErrorCheck "svn update --accept tf --non-interactive --trust-server-cert $revision edksetup.sh" "$(pwd)"
+	svnWithErrorCheck "svn update $SVN_OPT --accept tf --non-interactive --trust-server-cert $revision edksetup.sh" "$(pwd)"
 	for d in "${edk2array[@]}"
 	do
 		if [[ "$d" != "Source" && "$d" != "Scripts" ]]; then
@@ -863,17 +881,17 @@ else
 			if [[ -d "${DIR_MAIN}/edk2/${d}" ]] ; then
 				if [[ -d "${DIR_MAIN}/edk2/${d}/.svn" ]] ; then
 					cd "${DIR_MAIN}/edk2/${d}"
-					svnWithErrorCheck "svn update --accept tf --non-interactive --trust-server-cert $revision" "$(pwd)"
+					svnWithErrorCheck "svn update $SVN_OPT --accept tf --non-interactive --trust-server-cert $revision" "$(pwd)"
 					if [[ "$d" == "BaseTools" ]]; then ForceEDK2Update=1979; fi
 				else
 					printWarning ".svn missing, the ${d} repo may be corrupted, re-downloading...\n"
 					cd "${DIR_MAIN}/edk2/${d}"
 					rm -rf ./* > /dev/null 2>&1
-					svnWithErrorCheck "svn co $revision --non-interactive --trust-server-cert $EDK2_REP/${d} ."
+					svnWithErrorCheck "svn checkout $SVN_OPT $revision --non-interactive --trust-server-cert $EDK2_REP/${d} ."
 				fi
 			else
 				cd "${DIR_MAIN}"/edk2
-				svnWithErrorCheck "svn co $revision --non-interactive --trust-server-cert $EDK2_REP/${d}"
+				svnWithErrorCheck "svn checkout $SVN_OPT $revision --non-interactive --trust-server-cert $EDK2_REP/${d}"
 			fi
 		fi
 	done
@@ -891,6 +909,17 @@ fi
 # --------------------------------------
 clover() {
 local cmd=""
+if [[ "$USE_CLOVER_GIT" == "YES" ]]; then
+    if [[ ! -d "${DIR_MAIN}/edk2/Clover" ]]; then
+        cd "${DIR_MAIN}"/edk2
+        git clone "$CLOVER_GIT" Clover
+        cd "${DIR_MAIN}"
+    else
+        cd "${DIR_MAIN}"/edk2/Clover
+        git pull
+        cd "${DIR_MAIN}"
+    fi
+else
 # check if SUGGESTED_CLOVER_REV is set
 if [[ -z "$SUGGESTED_CLOVER_REV" ]]; then
 	echo
@@ -898,7 +927,7 @@ if [[ -z "$SUGGESTED_CLOVER_REV" ]]; then
 		printHeader 'Downloading Clover, using the latest revision'
 		if IsNumericOnly "${REMOTE_REV}"; then
 			mkdir -p "${DIR_MAIN}"/edk2/Clover
-			cmd="svn co -r $REMOTE_REV --non-interactive --trust-server-cert ${CLOVER_REP} ."
+			cmd="svn checkout $SVN_OPT -r $REMOTE_REV --non-interactive --trust-server-cert ${CLOVER_REP} ."
 		else
 			printError "Unable to get latest Clover revision, check your internet connection or try later.\n"
 			exit 1
@@ -907,33 +936,36 @@ if [[ -z "$SUGGESTED_CLOVER_REV" ]]; then
 		if [[ "${LOCAL_REV}" == "" ]]; then
 			printHeader 'Clover local repo not found or damaged, downloading the latest revision'
 			rm -rf "${DIR_MAIN}"/edk2/Clover/* > /dev/null 2>&1
-			cmd="svn co -r $REMOTE_REV --non-interactive --trust-server-cert ${CLOVER_REP} ."
+			cmd="svn checkout $SVN_OPT -r $REMOTE_REV --non-interactive --trust-server-cert ${CLOVER_REP} ."
 		else
 			printHeader 'Updating Clover, using the latest revision'
-			cmd="svn up --accept tf --non-interactive --trust-server-cert"
+			cmd="svn update $SVN_OPT --accept tf --non-interactive --trust-server-cert"
 		fi
 	fi
 else
 	if [[ ! -d "${DIR_MAIN}/edk2/Clover" ]] ; then
 		printHeader "Downloading Clover, using the specific revision r${SUGGESTED_CLOVER_REV}"
 		mkdir -p "${DIR_MAIN}"/edk2/Clover
-		cmd="svn co -r $SUGGESTED_CLOVER_REV --non-interactive --trust-server-cert ${CLOVER_REP} ."
+		cmd="svn checkout $SVN_OPT -r $SUGGESTED_CLOVER_REV --non-interactive --trust-server-cert ${CLOVER_REP} ."
 	else
 		if [[ "${LOCAL_REV}" == "" ]]; then
 			printHeader "Clover local repo not found or damaged, downloading the specific revision r${SUGGESTED_CLOVER_REV}"
 			rm -rf "${DIR_MAIN}"/edk2/Clover/* > /dev/null 2>&1
-			cmd="svn co -r $SUGGESTED_CLOVER_REV --non-interactive --trust-server-cert ${CLOVER_REP} ."
+			cmd="svn checkout $SVN_OPT -r $SUGGESTED_CLOVER_REV --non-interactive --trust-server-cert ${CLOVER_REP} ."
 		else 
 			printHeader "Updating Clover, using the specific revision r${SUGGESTED_CLOVER_REV}"
-			cmd="svn up --accept tf --non-interactive --trust-server-cert -r $SUGGESTED_CLOVER_REV"
+			cmd="svn update $SVN_OPT --accept tf --non-interactive --trust-server-cert -r $SUGGESTED_CLOVER_REV"
 		fi
 	fi
 fi
+fi #REVIEW_REHABMAN: indenting, but trying to avoid conflicts
+if [[ ! -z "$cmd" ]]; then
 TIMES=0
 IsLinkOnline ${CLOVER_REP}
 cd "${DIR_MAIN}"/edk2/Clover
 svnWithErrorCheck "$cmd" "$(pwd)"
 printHeader 'Apply Edk2 patches'
+fi #REVIEW_REHABMAN: indenting
 cp -R "${DIR_MAIN}"/edk2/Clover/Patches_for_EDK2/* "${DIR_MAIN}"/edk2/
 
 # in Lion cp cause error with subversion (comment this line and enable next)
@@ -1170,7 +1202,7 @@ rm -rf "${DIR_DOWNLOADS}"/source.download
 }
 # --------------------------------------
 showMacros() {
-clear
+ClearScreen
 CUSTOM_BUILD="YES"
 case "$ARCH" in
 	IA32_X64 ) printHeader "BUILD boot3 and boot7 with additional macros";;
@@ -1218,7 +1250,7 @@ fi
 }
 # --------------------------------------
 build() {
-if [[ -d "${DIR_MAIN}/edk2/Clover/.svn" ]] ; then
+if [[ -d "${DIR_MAIN}/edk2/Clover/.svn" || -d "${DIR_MAIN}/edk2/Clover/.git" ]] ; then
 	echo 'Please enter your choice: '
 	local options=()
 
@@ -1300,7 +1332,7 @@ if [[ -d "${DIR_MAIN}/edk2/Clover/.svn" ]] ; then
 		| "update \"buildclover\" symlink" ) addSymlink;;
 		"update Build_Clover.command" ) selfUpdate; build;;
 		"enter Developers mode (only for devs)" )
-			clear
+			ClearScreen
 			if [[ -d "${DIR_MAIN}/edk2/Clover" ]] ; then
 				set +e
 				BUILDER="slice"
@@ -1410,13 +1442,13 @@ if [[ -d "${DIR_MAIN}/edk2/Clover/.svn" ]] ; then
 				CleanExit
 			fi;;
 		"info and limitations about this script" ) showInfo;;
-		"Back to Main Menu" ) clear && BUILDER=$USER && build;;
+		"Back to Main Menu" ) ClearScreen && BUILDER=$USER && build;;
 		"Exit" ) CleanExit;;
-		* ) clear && echo "invalid option!!" && build;;
+		* ) ClearScreen && echo "invalid option!!" && build;;
 	esac
 fi
 
-if [[ "$BUILDER" == 'slice' ]]; then clear && build; fi
+if [[ "$BUILDER" == 'slice' ]]; then ClearScreen && build; fi
 
 # show info about the running OS and its gcc
 case "$SYSNAME" in
@@ -1447,7 +1479,7 @@ if [[ "$BUILDER" != 'slice' ]]; then restoreClover; fi
 if [[ "$UPDATE_FLAG" == YES && "$BUILDER" != 'slice' ]]; then getRev; edk2; clover; fi
 
 if [[ "$BUILD_FLAG" == NO ]]; then
-	clear
+	ClearScreen
 	# print updated remote and local revision
 	if [[ -d "${DIR_MAIN}"/edk2 ]]; then getRev; printRevisions; fi;
 	build
@@ -1544,8 +1576,12 @@ esac
 
 if [[ "$BUILDER" != 'slice' ]]; then restoreClover; fi
 printHeader "build started at:\n${START_BUILD}\nfinished at\n$(date)\n\nDone!\n"
-printf '\e[3;0;0t'
-pressAnyKey "Clover was built successfully!" noclear; clear; build
+if [[ "$DISABLE_CLEAR" != "YES" ]]; then
+    printf '\e[3;0;0t'
+    pressAnyKey "Clover was built successfully!" noclear
+    clear
+fi
+build
 }
 # --------------------------------------
 # MAIN CODE
@@ -1564,12 +1600,19 @@ case "$MODE" in
 	"R" )
 		export DIR_MAIN="${SCRIPT_ABS_PATH}"/src
 		if [[ "${DIR_MAIN}" = "${DIR_MAIN%[[:space:]]*}" ]]; then
-			echo "good, no blank spaces in DIR_MAIN, continuing.."
+            echo "good, no blank spaces in DIR_MAIN, continuing.." >/dev/null
 		else
-			clear; printError "Error: MODE=\"R\" require a path with no spaces in the middle, exiting!\n"; exit 1
+			ClearScreen; printError "Error: MODE=\"R\" require a path with no spaces in the middle, exiting!\n"; exit 1
 		fi;;
+    "D" )
+        export DIR_MAIN="${SCRIPT_ABS_PATH}"
+        if [[ "${DIR_MAIN}" = "${DIR_MAIN%[[:space:]]*}" ]]; then
+            echo "good, no blank spaces in DIR_MAIN, continuing.." >/dev/null
+        else
+            ClearScreen; printError "Error: MODE=\"D\" require a path with no spaces in the middle, exiting!\n"; exit 1
+        fi;;
 	* )
-		clear; printError "Error: unsupported MODE\n"; exit 1;;
+		ClearScreen; printError "Error: unsupported MODE\n"; exit 1;;
 esac
 
 SVN_STDERR_LOG="${DIR_MAIN}/svnLog.txt"
