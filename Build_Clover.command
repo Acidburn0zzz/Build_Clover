@@ -99,6 +99,7 @@ EDK2_REP="svn://svn.code.sf.net/p/edk2/code/trunk/edk2"
 CLOVER_GIT="https://github.com/RehabMan/Clover.git"
 USE_CLOVER_GIT=YES
 SVN_OPT=-q
+FORCE_CLEAN=YES
 
 SELF_UPDATE_OPT="NO" # show hide selfUpdate option
 PING_RESPONSE="NO" # show hide option with connection dependency
@@ -913,12 +914,17 @@ if [[ "$USE_CLOVER_GIT" == "YES" ]]; then
     if [[ ! -d "${DIR_MAIN}/edk2/Clover" ]]; then
         cd "${DIR_MAIN}"/edk2
         git clone "$CLOVER_GIT" Clover
-        cd "${DIR_MAIN}"
     else
         cd "${DIR_MAIN}"/edk2/Clover
         git pull
-        cd "${DIR_MAIN}"
     fi
+    # git has no concept of empty directories, and we need these...
+    cd "${DIR_MAIN}"/edk2/Clover/CloverPackage/CloverV2/EFI/CLOVER
+    if [[ ! -d ACPI/patched ]]; then mkdir -p ACPI/patched; fi
+    if [[ ! -d ACPI/origin ]]; then mkdir -p ACPI/origin; fi
+    if [[ ! -d misc ]]; then mkdir -p misc; fi
+    if [[ ! -d kexts/Other ]]; then mkdir -p kexts/Other; fi
+    cd "${DIR_MAIN}"
 else
 # check if SUGGESTED_CLOVER_REV is set
 if [[ -z "$SUGGESTED_CLOVER_REV" ]]; then
@@ -1499,7 +1505,12 @@ GCC53 )
 XCODE* ) exportXcodePaths; printHeader "BUILDTOOL is $BUILDTOOL";;
 esac
 
-if [[ "$BUILDER" != 'slice' ]]; then buildEssentials; cleanCloverV2; fi
+if [[ "$BUILDER" != 'slice' ]]; then
+    buildEssentials;
+    if [[ "$FORCE_CLEAN" == "YES" ]]; then
+        cleanCloverV2;
+    fi
+fi
 
 cd "${DIR_MAIN}"/edk2/Clover
 
