@@ -681,7 +681,7 @@ if [[ "$XCODE" == "" ]]; then
 		[1-6]* | 7 | 7.[0-2]*) XCODE="XCODE5"; LTO_FLAG="--no-lto";;
 		7.[34]*) XCODE="XCODE5";;
 		8*) XCODE="XCODE8";;
-		9*) XCODE="XCODE9";;
+		9*) XCODE="XCODE8";;
 		*) printError "Unknown Xcode version format, exiting!\n"; exit 1;;
 	esac
 fi
