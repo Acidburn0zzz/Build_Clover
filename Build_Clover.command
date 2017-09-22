@@ -33,12 +33,12 @@ if [[ "$DISABLE_CLEAR" != "YES" ]]; then printf '\e[8;34;90t'; fi
 # --------------------------------------
 # preferred build tool (gnu or darwin)
 # --------------------------------------
-XCODE="" # empty by default, overrides the auto-detected XCODE toolchain, possible values: XCODE32 XCODE5 XCODE8 XCODE9
+XCODE="" # empty by default, overrides the auto-detected XCODE toolchain, possible values: XCODE32 XCODE5 XCODE8
 GNU="" # empty by default (GCC53 is used if not defined), override the GCC toolchain, possible values: GCC49 GCC53
 Build_Tool="XCODE" # Build tool. Possible values: XCODE or GNU. DO NOT USE ANY OTHER VALUES HERE !
 # in Linux this get overrided and GCC53 used anyway!
 # --------------------------------------
-SCRIPTVER="v4.5.4"
+SCRIPTVER="v4.5.5"
 export LC_ALL=C
 SYSNAME="$( uname )"
 
@@ -60,7 +60,7 @@ SUGGESTED_CLOVER_REV="" # empty by default
 #   (note: MODE D does not quite work)
 MODE="R"
 
-DEFAULT_MACROS="-D NO_GRUB_DRIVERS_EMBEDDED -D CHECK_FLAGS"
+DEFAULT_MACROS="-D NO_GRUB_DRIVERS_EMBEDDED"
 PATCHES="$HOME/CloverPatches" # or where you like
 BUILD_PKG="YES" # NO to not build the pkg
 BUILD_ISO="NO" # YES if you want the iso
@@ -142,7 +142,6 @@ macros=(
 	ENABLE_USB_OHCI
 	ENABLE_USB_XHCI
 	REAL_NVRAM
-	CHECK_FLAGS
 	)
 # --------------------------------------
 # FUNCTIONS
@@ -1217,6 +1216,7 @@ case "$ARCH" in
 	IA32 ) printHeader "BUILD boot3 with additional macros";;
 esac
 local count=1;
+
 for macro in ${macros[@]}
 do
 	printf "\t $count) ${macro}\n"
@@ -1372,25 +1372,25 @@ if [[ -d "${DIR_MAIN}/edk2/Clover/.svn" || -d "${DIR_MAIN}/edk2/Clover/.git" ]] 
 			cd "${DIR_MAIN}"/edk2/Clover
 			START_BUILD=$(date)
 			printHeader 'boot6'
-			./ebuild.sh -x64 -D NO_GRUB_DRIVERS_EMBEDDED -D CHECK_FLAGS -t $BUILDTOOL
+			./ebuild.sh -x64 -D NO_GRUB_DRIVERS_EMBEDDED -t $BUILDTOOL
 			printHeader 'boot7'
-			./ebuild.sh -mc --no-usb -D NO_GRUB_DRIVERS_EMBEDDED -D CHECK_FLAGS -t $BUILDTOOL
+			./ebuild.sh -mc --no-usb -D NO_GRUB_DRIVERS_EMBEDDED -t $BUILDTOOL
 			echo && printf "build started at:\n${START_BUILD}\nfinished at\n$(date)\n\nDone!\n";;
 		"build binaries with -fr (boot6 and 7)" )
 			cd "${DIR_MAIN}"/edk2/Clover
 			START_BUILD=$(date)
 			printHeader 'boot6'
-			./ebuild.sh -fr -x64 -D NO_GRUB_DRIVERS_EMBEDDED -D CHECK_FLAGS -t $BUILDTOOL
+			./ebuild.sh -fr -x64 -D NO_GRUB_DRIVERS_EMBEDDED -t $BUILDTOOL
 			printHeader 'boot7'
-			./ebuild.sh -fr -mc --no-usb -D NO_GRUB_DRIVERS_EMBEDDED -D CHECK_FLAGS -t $BUILDTOOL
+			./ebuild.sh -fr -mc --no-usb -D NO_GRUB_DRIVERS_EMBEDDED -t $BUILDTOOL
 			echo && printf "build started at:\n${START_BUILD}\nfinished at\n$(date)\n\nDone!\n";;
 		"build boot6/7 with -fr --std-ebda" )
 			cd "${DIR_MAIN}"/edk2/Clover
 			START_BUILD=$(date)
 			printHeader 'boot6'
-			./ebuild.sh -fr -x64 --std-ebda -D NO_GRUB_DRIVERS_EMBEDDED -D CHECK_FLAGS -t $BUILDTOOL
+			./ebuild.sh -fr -x64 --std-ebda -D NO_GRUB_DRIVERS_EMBEDDED -t $BUILDTOOL
 			printHeader 'boot7'
-			./ebuild.sh -fr -mc --std-ebda --no-usb -D NO_GRUB_DRIVERS_EMBEDDED -D CHECK_FLAGS -t $BUILDTOOL
+			./ebuild.sh -fr -mc --std-ebda --no-usb -D NO_GRUB_DRIVERS_EMBEDDED -t $BUILDTOOL
 			echo && printf "build started at:\n${START_BUILD}\nfinished at\n$(date)\n\nDone!\n";;
 		"build pkg" )
 			cd "${DIR_MAIN}"/edk2/Clover/CloverPackage
@@ -1414,9 +1414,9 @@ if [[ -d "${DIR_MAIN}/edk2/Clover/.svn" || -d "${DIR_MAIN}/edk2/Clover/.git" ]] 
 			cd "${DIR_MAIN}"/edk2/Clover
 			START_BUILD=$(date)
 			printHeader 'boot6'
-			./ebuild.sh -fr -x64 -D NO_GRUB_DRIVERS_EMBEDDED -D CHECK_FLAGS -t $BUILDTOOL
+			./ebuild.sh -fr -x64 -D NO_GRUB_DRIVERS_EMBEDDED -t $BUILDTOOL
 			printHeader 'boot7'
-			./ebuild.sh -fr -mc --no-usb -D NO_GRUB_DRIVERS_EMBEDDED -D CHECK_FLAGS -t $BUILDTOOL
+			./ebuild.sh -fr -mc --no-usb -D NO_GRUB_DRIVERS_EMBEDDED -t $BUILDTOOL
 
 			cd "${DIR_MAIN}"/edk2/Clover/CloverPackage
 			make clean
@@ -1660,5 +1660,8 @@ fi
 
 # print the remote and the local revision
 if [[ -d "${DIR_MAIN}"/edk2 ]]; then getRev; printRevisions; fi;
+
+# readding removed macro CHECK_FLAGS on old source
+if [[ "$LOCAL_REV" -lt "4209" ]]; then macros+=("CHECK_FLAGS"); fi
 
 build
