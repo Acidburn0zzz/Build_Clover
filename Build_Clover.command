@@ -96,10 +96,17 @@ GITHUB='https://raw.githubusercontent.com/Micky1979/Build_Clover/master/Build_Cl
 CLOVER_REP="svn://svn.code.sf.net/p/cloverefiboot/code"
 EDK2_REP="svn://svn.code.sf.net/p/edk2/code/trunk/edk2"
 
+# for using git repo of Clover (in this case, RehabMan fork)
 CLOVER_GIT="https://github.com/RehabMan/Clover.git"
+#CLOVER_GIT="/Volumes/Projects/git/clover.gitsvn"
 USE_CLOVER_GIT=YES
 SVN_OPT=-q
 FORCE_CLEAN=YES
+
+# for using git repo of edk2 (sourceforge svn for edk2 is deprecated)
+EDK2_GIT="https://github.com/RehabMan/edk2.git"
+#EDK2_GIT="/Volumes/Projects/git/edk2.git"
+USE_EDK2_GIT=YES
 
 SELF_UPDATE_OPT="NO" # show hide selfUpdate option
 PING_RESPONSE="NO" # show hide option with connection dependency
@@ -827,6 +834,17 @@ return $result
 }
 # --------------------------------------
 edk2() {
+if [[ "$USE_EDK2_GIT" == "YES" ]]; then
+	if [[ ! -d "${DIR_MAIN}/edk2" ]]; then
+		if [[ ! -d "${DIR_MAIN}" ]]; then mkdir -p "${DIR_MAIN}"; fi
+		cd "${DIR_MAIN}"
+		git clone "$EDK2_GIT" edk2
+	else
+		cd "${DIR_MAIN}"/edk2
+		git pull
+	fi
+	cd "${DIR_MAIN}"
+else
 local revision="-r $EDK2_REV"
 local updatelink="https://sourceforge.net/p/cloverefiboot/code/HEAD/tree/update.sh?format=raw"
 local edk2ArrayOnline=(
@@ -906,6 +924,7 @@ else
 	fi
 	ForceEDK2Update=0
 fi
+fi #REVIEW_REHABMAN: indenting, but trying to avoid conflicts
 }
 # --------------------------------------
 clover() {
@@ -972,7 +991,8 @@ cd "${DIR_MAIN}"/edk2/Clover
 svnWithErrorCheck "$cmd" "$(pwd)"
 printHeader 'Apply Edk2 patches'
 fi #REVIEW_REHABMAN: indenting
-cp -R "${DIR_MAIN}"/edk2/Clover/Patches_for_EDK2/* "${DIR_MAIN}"/edk2/
+#REVIEW_REHABMAN: only copy files in Conf directory
+cp -R "${DIR_MAIN}"/edk2/Clover/Patches_for_EDK2/Conf/* "${DIR_MAIN}"/edk2/Conf
 
 # in Lion cp cause error with subversion (comment this line and enable next)
 # rsync -rv --exclude=.svn "${DIR_MAIN}"/edk2/Clover/Patches_for_EDK2/ "${DIR_MAIN}"/edk2
@@ -1349,9 +1369,12 @@ if [[ -d "${DIR_MAIN}/edk2/Clover/.svn" || -d "${DIR_MAIN}/edk2/Clover/.git" ]] 
 			fi
 			build;;
 		"update Clover only (no building)" )
+			UPDATE_FLAG="YES"
 			BUILD_FLAG="NO"
 			ForceEDK2Update=0;;
 		"update Clover + force edk2 update (no building)" )
+			UPDATE_FLAG="YES"
+			BUILD_FLAG="NO"
 			ForceEDK2Update=1979;; # 1979 has a special meaning ...i.e force clean BaseTools
 		"build existing revision (no update, for testing only)" )
 			UPDATE_FLAG="NO"
