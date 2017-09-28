@@ -107,6 +107,7 @@ FORCE_CLEAN=YES
 EDK2_GIT="https://github.com/RehabMan/edk2.git"
 #EDK2_GIT="/Volumes/Projects/git/edk2.git"
 USE_EDK2_GIT=YES
+FULL_EDK2_PATCHES=NO
 
 SELF_UPDATE_OPT="NO" # show hide selfUpdate option
 PING_RESPONSE="NO" # show hide option with connection dependency
@@ -991,8 +992,13 @@ cd "${DIR_MAIN}"/edk2/Clover
 svnWithErrorCheck "$cmd" "$(pwd)"
 printHeader 'Apply Edk2 patches'
 fi #REVIEW_REHABMAN: indenting
-#REVIEW_REHABMAN: only copy files in Conf directory
-cp -R "${DIR_MAIN}"/edk2/Clover/Patches_for_EDK2/Conf/* "${DIR_MAIN}"/edk2/Conf
+
+# copy required EDK2 patches (when using RehabMan edk2 fork, these are minimal)
+if [[ "${FULL_EDK2_PATCHES}" == "YES" ]]; then
+	cp -R "${DIR_MAIN}"/edk2/Clover/Patches_for_EDK2/* "${DIR_MAIN}"/edk2/
+else
+	cp -R "${DIR_MAIN}"/edk2/Clover/Patches_for_EDK2/Conf/* "${DIR_MAIN}"/edk2/Conf/
+fi
 
 # in Lion cp cause error with subversion (comment this line and enable next)
 # rsync -rv --exclude=.svn "${DIR_MAIN}"/edk2/Clover/Patches_for_EDK2/ "${DIR_MAIN}"/edk2
